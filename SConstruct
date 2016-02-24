@@ -26,15 +26,15 @@ else:
 
 zoic = {"name": "zoic",
         "type": "dynamicmodule",
-        "prefix": "arnold",
+        "prefix": "bin",
         "ext": arnold.PluginExt(),
         "srcs": ["src/zoic.cpp"],
         "defs": defs,
         "incdirs": incdirs,
         "libdirs": libdirs,
         "libs": libs,
-        "install": {"arnold": ["bin/zoic.mtd"],
-                    "maya/ae": ["ae/aiZoicTemplate.py"]},
+        "install": {"bin": ["bin/zoic.mtd"],
+                    "ae": ["ae/aiZoicTemplate.py"]},
         "custom": [arnold.Require]}
 
 excons.DeclareTargets(env, [zoic])
