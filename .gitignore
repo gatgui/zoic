@@ -1,4 +1,7 @@
 university/*
 src/imgs/*
-src/Makefile
-
+excons.cache
+*.dblite
+release/
+debug/
+.build/
