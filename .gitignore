@@ -1,5 +1,6 @@
 university/*
 src/imgs/*
+tests/hdr_nightscape.exr
 excons.cache
 *.dblite
 release/

@@ -11,24 +11,36 @@ options
  xres 960
  yres 350
  enable_fast_opacity on
- texture_per_file_stats on
- texture_glossy_blur 0
  camera "perspShape"
  background "aiSky"
- GI_reflection_depth 0
- GI_refraction_depth 0
- GI_total_depth 0
- GI_diffuse_samples 0
- GI_glossy_samples 0
- GI_refraction_samples 0
- GI_sss_samples 0
- GI_volume_samples 0
  declare frame constant FLOAT
  frame 1
  declare render_layer constant STRING
  render_layer "defaultRenderLayer"
  declare fps constant FLOAT
  fps 24
+}
+
+persp_camera
+{
+ name stdCam
+ fov 39.59
+ matrix
+ 0.312334925 0 -0.949972034 0
+ 0.153605282 -0.986840844 0.0505028479 0
+ -0.937471211 -0.161694527 -0.308224857 0
+ -151.949905 -125.252197 -62.9163322 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 1
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ handedness "right"
+ screen_window_min -1 -1
+ screen_window_max 1 1
+ exposure 0
 }
 
 zoic
@@ -58,66 +70,6 @@ zoic
  handedness "right"
  screen_window_min -1 -1
  screen_window_max 1 1
- exposure 0
-}
-
-ortho_camera
-{
- name topShape
- matrix
- 1 0 -0 0
- -0 2.22044605e-16 -1 0
- 0 1 2.22044605e-16 0
- 0 100.099998 0 1
- near_clip 0.100000001
- far_clip 10000
- shutter_start 0
- shutter_end 1
- shutter_type "box"
- rolling_shutter "off"
- rolling_shutter_duration 0
- screen_window_min -15 -15
- screen_window_max 15 15
- exposure 0
-}
-
-ortho_camera
-{
- name frontShape
- matrix
- 1 0 0 0
- 0 1 0 0
- 0 0 1 0
- 0 0 100.099998 1
- near_clip 0.100000001
- far_clip 10000
- shutter_start 0
- shutter_end 1
- shutter_type "box"
- rolling_shutter "off"
- rolling_shutter_duration 0
- screen_window_min -15 -15
- screen_window_max 15 15
- exposure 0
-}
-
-ortho_camera
-{
- name sideShape
- matrix
- 2.22044605e-16 0 -1 0
- 0 1 0 0
- 1 0 2.22044605e-16 0
- 100.099998 0 0 1
- near_clip 0.100000001
- far_clip 10000
- shutter_start 0
- shutter_end 1
- shutter_type "box"
- rolling_shutter "off"
- rolling_shutter_duration 0
- screen_window_min -15 -15
- screen_window_max 15 15
  exposure 0
 }
 
