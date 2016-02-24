@@ -3,10 +3,12 @@ import excons
 from excons.tools import arnold
 
 excons.SetArgument("use-c++11", 1)
+excons.SetArgument("no-arch", 1)
 
 env = excons.MakeBaseEnv()
 
-# Arnold 4.2.9.0 provides api to read texture data
+# Arnold 4.2.9.0 provides api AiTextureLoad to read texture data
+# Arnold 4.2.10.0 adds a new parameter to the function above
 
 defs = []
 incdirs = []
