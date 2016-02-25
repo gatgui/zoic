@@ -199,7 +199,7 @@ imageData* readImage(char const *bokeh_kernel_filename){
     unsigned int iw, ih, nc;
     if (!AiTextureGetResolution(path, &iw, &ih) ||
         !AiTextureGetNumChannels(path, &nc)){
-        return nullptr;
+        return 0;
     }
 
     imageData* img = new imageData;
@@ -221,7 +221,7 @@ imageData* readImage(char const *bokeh_kernel_filename){
 #endif
 #endif
         delete img;
-        return nullptr;
+        return 0;
     }
 
 #else
@@ -235,7 +235,7 @@ imageData* readImage(char const *bokeh_kernel_filename){
     //file format, and tries to fully open the file.
     OpenImageIO::ImageInput *in = OpenImageIO::ImageInput::open (bokeh_kernel_filename);
     if (! in){
-        return nullptr; // Return a null pointer if we have issues
+        return 0; // Return a null pointer if we have issues
     }
 
     imageData* img = new imageData;
@@ -651,7 +651,7 @@ node_parameters {
 
 node_initialize {
    cameraData *camera = new cameraData;
-   camera->image = nullptr;
+   camera->image = 0;
    AiCameraInitialize(node, (void*)camera);
 
 }
@@ -670,7 +670,7 @@ node_update {
 
    if (camera->image){
        delete camera->image;
-       camera->image = nullptr;
+       camera->image = 0;
    }
 
    // make probability functions of the bokeh image
@@ -725,7 +725,7 @@ camera_create_ray {
         if (_useImage == false){
             ConcentricSampleDisk(input->lensx, input->lensy, &lensU, &lensV);
         }
-        else if (camera->image != nullptr){
+        else if (camera->image != 0){
             // sample bokeh image
             bokehSample(camera->image, input->lensx, input->lensy, &lensU, &lensV);
         }
