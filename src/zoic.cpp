@@ -92,8 +92,30 @@
 #      endif
 #    endif
 #  endif
+#  ifdef AITEXTURELOAD_PROTO2
+inline bool LoadTexture(const AtString path, void *pixelData){
+    return AiTextureLoad(path, false, 0, pixelData);
+}
+#  else
+#    ifdef AITEXTURELOAD_PROTO1
+inline bool LoadTexture(const AtString path, void *pixelData){
+    return AiTextureLoad(path, false,  pixelData);
+}
+#    else
+inline bool LoadTexture(const AtString path, void *pixelData){
+    AiMsgError("Current arnold version doesn't have texture loading API");
+    return false;
+}
+#    endif
+#  endif
 #else
 #  include <OpenImageIO/imageio.h>
+#endif
+
+#ifdef _DEBUG
+#  define DEBUG_ONLY(block) block
+#else
+#  define DEBUG_ONLY(block)
 #endif
 
 // Arnold thingy
@@ -113,131 +135,6 @@ AI_CAMERA_NODE_EXPORT_METHODS(zoicMethods)
 #define _exposureControl (params[11].FLT)
 
 
-struct imageData{
-     int x, y;
-     int nchannels;
-    //  std::vector<uint8_t> pixelData;
-    //  std::vector<float> cdfRow;
-    //  std::vector<float> cdfColumn;
-    //  std::vector<float> summedRowValues;
-    //  std::vector<float> normalizedValuesPerRow;
-    //  std::vector<int> rowIndices;
-    //  std::vector<int> columnIndices;
-     uint8_t *pixelData;
-     float *cdfRow;
-     float *cdfColumn;
-     float *summedRowValues;
-     float *normalizedValuesPerRow;
-     int *rowIndices;
-     int *columnIndices;
-     
-     imageData()
-         : x(0), y(0), nchannels(0)
-         , pixelData(0), cdfRow(0), cdfColumn(0)
-         , summedRowValues(0), normalizedValuesPerRow(0)
-         , rowIndices(0), columnIndices(0) {
-     }
-     
-     ~imageData(){
-         clear();
-     }
-     
-     void clear(){
-         if (pixelData){
-             AiAddMemUsage(-x * y * nchannels * sizeof(uint8_t), "zoic.imageData");
-             AiFree(pixelData);
-             pixelData = 0;
-         }
-         if (cdfRow){
-             AiAddMemUsage(-x * y * sizeof(float), "zoic.imageData");
-             AiFree(cdfRow);
-             cdfRow = 0;
-         }
-         if (cdfColumn){
-             AiAddMemUsage(-(x * y + 1) * sizeof(float), "zoic.imageData");
-             AiFree(cdfColumn);
-             cdfColumn = 0;
-         }
-         if (summedRowValues){
-             AiAddMemUsage(-y * sizeof(float), "zoic.imageData");
-             AiFree(summedRowValues);
-             summedRowValues = 0;
-         }
-         if (normalizedValuesPerRow){
-             AiAddMemUsage(-x * y * sizeof(float), "zoic.imageData");
-             AiFree(normalizedValuesPerRow);
-             normalizedValuesPerRow = 0;
-         }
-         if (rowIndices){
-             AiAddMemUsage(-x * y * sizeof(int), "zoic.imageData");
-             AiFree(rowIndices);
-             rowIndices = 0;
-         }
-         if (columnIndices){
-             AiAddMemUsage(-(x * y + 1) * sizeof(int), "zoic.imageData");
-             AiFree(columnIndices);
-             columnIndices = 0;
-         }
-         x = y = nchannels = 0;
-     }
-     
-     void resize(int w, int h, int c){
-         if (w != x || h != y || c != nchannels){
-             clear();
-             
-             x = w;
-             y = h;
-             nchannels = c;
-             
-             AtInt64 nbytes = 0;
-             
-             nbytes = x * y * nchannels * sizeof(uint8_t);
-             AiAddMemUsage(nbytes, "zoic.imageData");
-             pixelData = (uint8_t*) AiMalloc(nbytes);
-             
-             nbytes = y * sizeof(float);
-             AiAddMemUsage(nbytes, "zoic.imageData");
-             summedRowValues = (float*) AiMalloc(nbytes);
-             
-             nbytes = x * y * sizeof(float);
-             AiAddMemUsage(nbytes, "zoic.imageData");
-             normalizedValuesPerRow = (float*) AiMalloc(nbytes);
-             
-             AiAddMemUsage(nbytes, "zoic.imageData");
-             cdfRow = (float*) AiMalloc(nbytes);
-             
-             nbytes = x * y * sizeof(int);
-             AiAddMemUsage(nbytes, "zoic.imageData");
-             rowIndices = (int*) AiMalloc(nbytes);
-             
-             nbytes = (x * y + 1) * sizeof(float);
-             AiAddMemUsage(nbytes, "zoic.imageData");
-             cdfColumn = (float*) AiMalloc(nbytes);
-             
-             nbytes = (x * y + 1) * sizeof(int);
-             AiAddMemUsage(nbytes, "zoic.imageData");
-             columnIndices = (int*) AiMalloc(nbytes);
-         }
-     }
-};
-
-struct cameraData{
-    float fov;
-    float tan_fov;
-    float apertureRadius;
-    imageData *image;
-    
-    cameraData()
-        : fov(0.0f), tan_fov(0.0f), apertureRadius(0.0f), image(0){
-    }
-    
-    ~cameraData(){
-        if (image){
-            delete image;
-        }
-    }
-};
-
 struct arrayCompare{
     const float *values;
     inline arrayCompare(const float *_values) :values(_values) {}
@@ -245,6 +142,481 @@ struct arrayCompare{
         return values[_lhs] > values[_rhs];
     }
 };
+
+class imageData{
+private:
+    int x, y;
+    int nchannels;
+    uint8_t *pixelData;
+    float *cdfRow;
+    float *cdfColumn;
+    float *summedRowValues;
+    float *normalizedValuesPerRow;
+    int *rowIndices;
+    int *columnIndices;
+    
+public:
+    imageData()
+        : x(0), y(0), nchannels(0)
+        , pixelData(0), cdfRow(0), cdfColumn(0)
+        , summedRowValues(0), normalizedValuesPerRow(0)
+        , rowIndices(0), columnIndices(0) {
+    }
+     
+    ~imageData(){
+        invalidate();
+    }
+     
+    bool isValid() const{
+        return (x * y * nchannels > 0 && nchannels >= 3);
+    }
+     
+    void invalidate(){
+        if (pixelData){
+            AiAddMemUsage(-x * y * nchannels * sizeof(uint8_t), "zoic");
+             AiFree(pixelData);
+             pixelData = 0;
+        }
+        if (cdfRow){
+            AiAddMemUsage(-x * y * sizeof(float), "zoic");
+            AiFree(cdfRow);
+            cdfRow = 0;
+        }
+        if (cdfColumn){
+            AiAddMemUsage(-x * y * sizeof(float), "zoic"); // why +1
+            AiFree(cdfColumn);
+            cdfColumn = 0;
+        }
+        if (summedRowValues){
+            AiAddMemUsage(-y * sizeof(float), "zoic");
+            AiFree(summedRowValues);
+            summedRowValues = 0;
+        }
+        if (normalizedValuesPerRow){
+            AiAddMemUsage(-x * y * sizeof(float), "zoic");
+            AiFree(normalizedValuesPerRow);
+            normalizedValuesPerRow = 0;
+        }
+        if (rowIndices){
+            AiAddMemUsage(-x * y * sizeof(int), "zoic");
+            AiFree(rowIndices);
+            rowIndices = 0;
+        }
+        if (columnIndices){
+            AiAddMemUsage(-x * y * sizeof(int), "zoic"); // why +1
+            AiFree(columnIndices);
+            columnIndices = 0;
+        }
+        x = y = nchannels = 0;
+    }
+    
+    bool read(const char *bokeh_kernel_filename){
+        
+        invalidate();
+        
+        AtInt64 nbytes = 0;
+        
+#ifdef NO_OIIO
+
+        AiMsgInfo("Reading image using Arnold API: %s", bokeh_kernel_filename);
+
+        AtString path(bokeh_kernel_filename);
+
+        unsigned int iw, ih, nc;
+        if (!AiTextureGetResolution(path, &iw, &ih) ||
+            !AiTextureGetNumChannels(path, &nc)){
+            return false;
+        }
+
+        if (nc < 3){
+            return false;
+        }
+        
+        x = int(iw);
+        y = int(ih);
+        nchannels = int(nc);
+        
+        nbytes = x * y * nchannels * sizeof(uint8_t);
+        AiAddMemUsage(nbytes, "zoic");
+        pixelData = (uint8_t*) AiMalloc(nbytes);
+
+        if (!LoadTexture(path, pixelData)){
+            invalidate();
+            return false;
+        }
+
+#else
+
+        AiMsgInfo("Reading image using OpenImageIO: %s", bokeh_kernel_filename);
+
+        //Search for an ImageIO plugin that is capable of reading the file ("foo.jpg"), first by
+        //trying to deduce the correct plugin from the file extension, but if that fails, by opening
+        //every ImageIO plugin it can find until one will open the file without error. When it finds
+        //the right plugin, it creates a subclass instance of ImageInput that reads the right kind of
+        //file format, and tries to fully open the file.
+        OpenImageIO::ImageInput *in = OpenImageIO::ImageInput::open (bokeh_kernel_filename);
+        if (! in){
+            return false;
+        }
+
+        const OpenImageIO::ImageSpec &spec = in->spec();
+        
+        if (spec.nchannels < 3){
+            return false;
+        }
+        
+        x = spec.width;
+        y = spec.height;
+        nchannels = spec.nchannels;
+
+        nbytes = x * y * nchannels * sizeof(uint8_t);
+        AiAddMemUsage(nbytes, "zoic");
+        pixelData = (uint8_t*) AiMalloc(nbytes);
+
+        in->read_image(OpenImageIO::TypeDesc::UINT8, pixelData);
+        in->close();
+        delete in;
+
+#endif
+
+        AiMsgInfo("Image Width: %d", x);
+        AiMsgInfo("Image Height: %d", y);
+        AiMsgInfo("Image Channels: %d", nchannels);
+        AiMsgInfo("Total amount of pixels to process: %d", x * y);
+
+        DEBUG_ONLY({
+            // print out raw pixel data
+            int npixels = x * y;
+            for (int i = 0, j = 0; i < npixels; i++){
+                std::cout << "[";
+                for (int k = 0; k < nchannels; k++, j++){
+                    std::cout << (int) pixelData[j];
+                    if (k + 1 < nchannels){
+                        std::cout << ", ";
+                    }
+                }
+                std::cout << "]";
+                if (i + 1 < npixels){
+                    std::cout << ", ";
+                }
+            }
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+        })
+        
+        bokehProbability();
+        
+        return true;
+    }
+    
+    // Importance sampling
+    void bokehProbability(){
+        if (!isValid()){
+            return;
+        }
+        
+        // initialize arrays
+        AtInt64 nbytes = x * y * sizeof(float);
+        AtInt64 totalTempBytes = 0;
+        
+        AiAddMemUsage(nbytes, "zoic");    
+        float *pixelValues = (float*) AiMalloc(nbytes);
+        totalTempBytes += nbytes;
+        
+        AiAddMemUsage(nbytes, "zoic");
+        float *normalizedPixelValues = (float*) AiMalloc(nbytes);
+        totalTempBytes += nbytes;
+        
+        int npixels = x * y;
+        float totalValue = 0.0f;
+        
+        // for every pixel, stuff going wrong here
+        for (int i=0, j=0; i < npixels; ++i){
+            // store pixel value in array
+            // calculate luminance [Y = 0.3 R + 0.59 G + 0.11 B]
+            pixelValues[i] = (pixelData[j] * 0.3) + (pixelData[j+1] * 0.59) + (pixelData[j+2] * 0.11f);
+            
+            totalValue += pixelValues[i];
+            
+            DEBUG_ONLY(std::cout << "Pixel Luminance: " << i << " -> " << pixelValues[i] << std::endl);
+            
+            j += nchannels;
+        }
+        
+        DEBUG_ONLY({
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "DEBUG: Total Pixel Value: " << totalValue << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+        })
+
+        // normalize pixel values so sum = 1
+        float invTotalValue = 1.0f / totalValue;
+        float totalNormalizedValue = 0.0f;
+        
+        for(int i=0; i < npixels; ++i){
+            normalizedPixelValues[i] = pixelValues[i] * invTotalValue;
+            
+            totalNormalizedValue += normalizedPixelValues[i];
+            
+            DEBUG_ONLY(std::cout << "Normalized Pixel Value: " << i << ": " << normalizedPixelValues[i] << std::endl);
+        }
+
+        DEBUG_ONLY({
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "DEBUG: Total Normalized Pixel Value: " << totalNormalizedValue << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+        })
+
+        // calculate sum for each row
+        nbytes = y * sizeof(float);
+        AiAddMemUsage(nbytes, "zoic");
+        summedRowValues = (float*) AiMalloc(nbytes);
+
+        for(int i=0, k=0; i < y; ++i){
+
+            summedRowValues[i] = 0.0f;
+
+            for(int j=0; j < x; ++j, ++k){
+
+                summedRowValues[i] += normalizedPixelValues[k];
+            }
+            
+            DEBUG_ONLY(std::cout << "Summed Values row [" << i << "]: " << summedRowValues[i] << std::endl);
+        }
+
+
+        DEBUG_ONLY({
+            // calculate sum of all row values, just to debug
+            float totalNormalizedRowValue = 0.0f;
+            for(int i=0; i < y; ++i){
+                totalNormalizedRowValue += summedRowValues[i];
+            }
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "Debug: Summed Row Value: " << totalNormalizedRowValue << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+        })
+
+
+        // make array of indices
+        nbytes = y * sizeof(int);
+        AiAddMemUsage(nbytes, "zoic");
+        int *summedRowValueCopyIndices = (int*) AiMalloc(nbytes);
+        totalTempBytes += nbytes;
+        
+        for(int i = 0; i < y; ++i){
+            summedRowValueCopyIndices[i] = i;
+        }
+
+        std::sort(summedRowValueCopyIndices, summedRowValueCopyIndices + y, arrayCompare(summedRowValues));
+
+
+        DEBUG_ONLY({
+            // print values
+            for(int i = 0; i < y; ++i){
+                std::cout << "PDF row [" <<  summedRowValueCopyIndices[i] << "]: " << summedRowValues[summedRowValueCopyIndices[i]] << std::endl;
+            }
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+        })
+
+
+        // For every row, add the sum of all previous row (cumulative distribution function)
+        nbytes = npixels * sizeof(float);
+        AiAddMemUsage(nbytes, "zoic");
+        cdfRow = (float*) AiMalloc(nbytes);
+        
+        nbytes = npixels * sizeof(int);
+        AiAddMemUsage(nbytes, "zoic");
+        rowIndices = (int*) AiMalloc(nbytes);
+
+        float prevVal = 0.0f;
+
+        for (int i = 0; i < y; ++i){
+            cdfRow[i] = prevVal + summedRowValues[summedRowValueCopyIndices[i]];
+            prevVal = cdfRow[i];
+            
+            rowIndices[i] = summedRowValueCopyIndices[i];
+
+            DEBUG_ONLY(std::cout << "CDF row [" << rowIndices[i] << "]: " << cdfRow[i] << std::endl);
+        }
+
+        DEBUG_ONLY({
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+        })
+        
+        nbytes = npixels * sizeof(float);
+        AiAddMemUsage(nbytes, "zoic");
+        normalizedValuesPerRow = (float*) AiMalloc(nbytes);
+        
+        // divide pixel values of each pixel by the sum of the pixel values of that row (Normalize)
+        for (int r = 0, i = 0; r < y; ++r){
+            for (int c = 0; c < x; ++c, ++i){
+                // avoid division by 0
+                if ((normalizedPixelValues[i] != 0) && (summedRowValues[r] != 0)){
+                    normalizedValuesPerRow[i] = normalizedPixelValues[i] / summedRowValues[r];
+                }
+                else{
+                    normalizedValuesPerRow[i] = 0;
+                }
+
+                DEBUG_ONLY(std::cout << "Normalized Pixel value per row: " << i << ": " << normalizedValuesPerRow[i] << std::endl);
+            }
+        }
+
+        DEBUG_ONLY({
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+        })
+
+        // sort column values from highest to lowest per row (probability density function)
+        nbytes = npixels * sizeof(int);
+        totalTempBytes += nbytes;
+        AiAddMemUsage(nbytes, "zoic");
+        int *summedColumnValueCopyIndices = (int*) AiMalloc(nbytes);
+        
+        for(int i = 0; i < npixels; i++){
+            summedColumnValueCopyIndices[i] = i;
+        }
+
+        for (int i = 0; i < npixels; i+=x){
+            std::sort(summedColumnValueCopyIndices + i, summedColumnValueCopyIndices + i + x, arrayCompare(normalizedValuesPerRow));
+        }
+
+        DEBUG_ONLY({
+            // print values
+            for(int i = 0; i < npixels; ++i){
+                std::cout << "PDF column [" << summedColumnValueCopyIndices[i] << "]: " << normalizedValuesPerRow[summedColumnValueCopyIndices[i]] << std::endl;
+            }
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+        })
+
+        // For every column per row, add the sum of all previous columns (cumulative distribution function)
+        nbytes = npixels * sizeof(float); // why +1?
+        AiAddMemUsage(nbytes, "zoic");
+        cdfColumn = (float*) AiMalloc(nbytes);
+        
+        nbytes = npixels * sizeof(int); // why +1?
+        AiAddMemUsage(nbytes, "zoic");
+        columnIndices = (int*) AiMalloc(nbytes);
+        
+        for (int r = 0, i = 0; r < y; ++r){
+            prevVal = 0.0f;
+            
+            for (int c = 0; c < x; ++c, ++i){
+                cdfColumn[i] = prevVal + normalizedValuesPerRow[summedColumnValueCopyIndices[i]];
+                prevVal = cdfColumn[i];
+                
+                columnIndices[i] = summedColumnValueCopyIndices[i];
+                
+                DEBUG_ONLY(std::cout << "CDF column [" <<  columnIndices[i] << "]: " << cdfColumn[i] << std::endl);
+            }
+        }
+
+        DEBUG_ONLY(std::cout << "----------------------------------------------" << std::endl);
+            
+        // Release and untrack memory
+        AiAddMemUsage(-totalTempBytes, "zoic");
+        
+        AiFree(pixelValues);
+        AiFree(normalizedPixelValues);
+        AiFree(summedRowValueCopyIndices);
+        AiFree(summedColumnValueCopyIndices);
+    }
+    
+    // Sample image
+    void bokehSample(float randomNumberRow, float randomNumberColumn, float *dx, float *dy){
+        
+        if (!isValid()){
+            AiMsgWarning("Invalid bokeh image data.");
+            *dx = 0.0f;
+            *dy = 0.0f;
+            return;
+        }
+        
+        // print random number between 0 and 1
+        DEBUG_ONLY(std::cout << "RANDOM NUMBER ROW: " << randomNumberRow << std::endl);
+
+        // find upper bound of random number in the array
+        float pUpperBound = *std::upper_bound(cdfRow, cdfRow + y, randomNumberRow);
+
+        DEBUG_ONLY(std::cout << "UPPER BOUND: " << pUpperBound << std::endl);
+
+        // find which element of the array the upper bound is
+        int r = std::distance(cdfRow, std::find(cdfRow, cdfRow + y, pUpperBound));
+
+        // find actual pixel row
+        int actualPixelRow = rowIndices[r];
+
+        // recalculate pixel row so that the center pixel is (0,0) - might run into problems with images of dimensions like 2x2, 4x4, 6x6, etc
+        int recalulatedPixelRow = actualPixelRow - ((x - 1) / 2);
+
+        DEBUG_ONLY({
+            // print values
+            std::cout << "INDEX IN CDF ROW: " << r << std::endl;
+            std::cout << "ACTUAL PIXEL ROW: " << actualPixelRow << std::endl;
+            std::cout << "RECALCULATED PIXEL ROW: " << recalulatedPixelRow << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+            // print random number between 0 and 1
+            std::cout << "RANDOM NUMBER COLUMN: " << randomNumberColumn << std::endl;
+        })
+
+        int startPixel = actualPixelRow * x;
+
+        DEBUG_ONLY(std::cout << "START PIXEL: " << startPixel << std::endl);
+
+
+        // find upper bound of random number in the array
+        float pUpperBoundColumn = *std::upper_bound(cdfColumn + startPixel, cdfColumn + startPixel + x, randomNumberColumn);
+
+        DEBUG_ONLY(std::cout << "UPPER BOUND: " << pUpperBoundColumn << std::endl);
+
+        // find which element of the array the upper bound is
+        int c = std::distance(cdfColumn, std::find(cdfColumn + startPixel, cdfColumn + startPixel + x, pUpperBoundColumn));
+
+        // find actual pixel column
+        int actualPixelColumn = columnIndices[c];
+        int relativePixelColumn = actualPixelColumn - startPixel;
+        int recalulatedPixelColumn = relativePixelColumn - ((y - 1) / 2);
+
+        DEBUG_ONLY({
+            // print values
+            std::cout << "INDEX IN CDF COLUMN: " << c << std::endl;
+            std::cout << "ACTUAL PIXEL COLUMN: " << actualPixelColumn << std::endl;
+            std::cout << "RELATIVE PIXEL COLUMN (starting from 0): " << relativePixelColumn << std::endl;
+            std::cout << "RECALCULATED PIXEL COLUMN: " << recalulatedPixelColumn << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+            std::cout << "----------------------------------------------" << std::endl;
+        })
+
+        // to get the right image orientation, flip the x and y coordinates and then multiply the y values by -1 to flip the pixels vertically
+        float flippedRow = recalulatedPixelColumn;
+        float flippedColumn = recalulatedPixelRow * -1.0f;
+
+        // send values back
+        *dx = (float)flippedRow / (float)x * 2;
+        *dy = (float)flippedColumn / (float)y * 2;
+    }
+};
+
+struct cameraData{
+    float fov;
+    float tan_fov;
+    float apertureRadius;
+    imageData image;
+    
+    cameraData()
+        : fov(0.0f), tan_fov(0.0f), apertureRadius(0.0f){
+    }
+    
+    ~cameraData(){
+    }
+};
+
 
 // PBRT v2 source code  - Concentric disk sampling (Sampling the disk in a more uniform way than with random sampling)
 inline void ConcentricSampleDisk(float u1, float u2, float *dx, float *dy) {
@@ -292,481 +664,7 @@ inline void ConcentricSampleDisk(float u1, float u2, float *dx, float *dy) {
     *dy = radius * std::sin(theta);
 }
 
-// Read bokeh image
-imageData* readImage(char const *bokeh_kernel_filename){
-
-#ifdef NO_OIIO
-
-    AiMsgInfo("Reading image using Arnold API: %s", bokeh_kernel_filename);
-
-    AtString path(bokeh_kernel_filename);
-
-    unsigned int iw, ih, nc;
-    if (!AiTextureGetResolution(path, &iw, &ih) ||
-        !AiTextureGetNumChannels(path, &nc)){
-        return 0;
-    }
-
-    imageData* img = new imageData;
-
-    //img->x = int(iw);
-    //img->y = int(ih);
-    //img->nchannels = int(nc);
-    img->resize(int(iw), int(ih), int(nc));
-
-    //img->pixelData.clear();
-    //img->pixelData.reserve(img->x * img->y * img->nchannels);
-#ifdef AITEXTURELOAD_PROTO2
-    //if (!AiTextureLoad(path, false, 0, &img->pixelData[0])){
-    if (!AiTextureLoad(path, false, 0, img->pixelData)){
-#else
-#ifdef AITEXTURELOAD_PROTO1
-    //if (!AiTextureLoad(path, false, &img->pixelData[0])){
-    if (!AiTextureLoad(path, false, img->pixelData)){
-#else
-    {
-        AiMsgError("Current arnold version doesn't have texture loading API");
-#endif
-#endif
-        delete img;
-        return 0;
-    }
-
-#else
-
-    AiMsgInfo("Reading image using OpenImageIO: %s", bokeh_kernel_filename);
-
-    //Search for an ImageIO plugin that is capable of reading the file ("foo.jpg"), first by
-    //trying to deduce the correct plugin from the file extension, but if that fails, by opening
-    //every ImageIO plugin it can find until one will open the file without error. When it finds
-    //the right plugin, it creates a subclass instance of ImageInput that reads the right kind of
-    //file format, and tries to fully open the file.
-    OpenImageIO::ImageInput *in = OpenImageIO::ImageInput::open (bokeh_kernel_filename);
-    if (! in){
-        return 0; // Return a null pointer if we have issues
-    }
-
-    imageData* img = new imageData;
-
-    const OpenImageIO::ImageSpec &spec = in->spec();
-    //img->x = spec.width;
-    //img->y = spec.height;
-    //img->nchannels = spec.nchannels;
-    img->resize(spec.width, spec.height, spec.nchannels);
-
-    //img->pixelData.clear();
-    //img->pixelData.reserve(img->x * img->y * img->nchannels);
-    //in->read_image (OpenImageIO::TypeDesc::UINT8, &img->pixelData[0]);
-    in->read_image(OpenImageIO::TypeDesc::UINT8, img->pixelData);
-    in->close();
-    delete in;
-
-#endif
-
-    AiMsgInfo("Image Width: %d", img->x);
-    AiMsgInfo("Image Height: %d", img->y);
-    AiMsgInfo("Image Channels: %d", img->nchannels);
-    AiMsgInfo("Total amount of pixels to process: %d", img->x * img->y);
-
-#ifdef _DEBUG
-    // print out raw pixel data
-    for (int i = 0; i < img->x * img->y * img->nchannels; i++){
-        int j = 0;
-        if(img->nchannels == 3){
-           if (j == 0){
-               std::cout << "[";
-                std::cout << (int)img->pixelData[i];
-               std::cout << ", ";
-                j += 1;
-            }
-            if (j == 1){
-                std::cout << (int)img->pixelData[i];
-                std::cout << ", ";
-                j += 1;
-            }
-           if (j == 2){
-                std::cout << (int)img->pixelData[i];
-                std::cout << "], ";
-                j = 0;
-            }
-        }
-
-        else if(img->nchannels == 4){
-            if (j == 0){
-                std::cout << "[";
-                std::cout << (int)img->pixelData[i];
-                std::cout << ", ";
-                j += 1;
-            }
-            if (j == 1){
-                std::cout << (int)img->pixelData[i];
-                std::cout << ", ";
-                j += 1;
-            }
-            if (j == 2){
-                std::cout <<  (int)img->pixelData[i];
-                std::cout << ", ";
-                j += 1;
-            }
-            if (j == 3){
-                std::cout << (int)img->pixelData[i];
-                std::cout << "], ";
-               j = 0;
-            }
-        }
-
-    }
-
-    std::cout << "----------------------------------------------" << std::endl;
-    std::cout << "----------------------------------------------" << std::endl;
-#endif
-
-    return img;
-}
-
-// Importance sampling
-void bokehProbability(imageData *img){
-    if(img){
-        // initialize arrays
-        //std::vector<float> pixelValues(img->x * img->y, 0.0f);
-        //std::vector<float> normalizedPixelValues(img->x * img->y, 0.0f);
-        AtInt64 nbytes = img->x * img->y * sizeof(float);
-        AtInt64 totalBytes = nbytes * 2;
-        
-        AiAddMemUsage(nbytes, "zoic.temporaries");
-        AiAddMemUsage(nbytes, "zoic.temporaries");
-        
-        float *pixelValues = (float*) AiMalloc(nbytes);
-        float *normalizedPixelValues = (float*) AiMalloc(nbytes);
-
-        // for every pixel, stuff going wrong here
-        int tmpPixelCounter = 0;
-        for(int i=0; i < img->x * img->y; ++i){
-            // store pixel value in array
-            // calculate luminance [Y = 0.3 R + 0.59 G + 0.11 B]
-            pixelValues[i] = (img->pixelData[tmpPixelCounter] * 0.3) + (img->pixelData[tmpPixelCounter+1] * 0.59) + (img->pixelData[tmpPixelCounter+2] * 0.11f);
-
-#ifdef _DEBUG
-            // print array
-            std::cout << "Pixel Luminance: " << i << " -> " << pixelValues[i] << std::endl;
-#endif
-
-            if(img->nchannels == 3){
-                tmpPixelCounter += 3;
-            }
-            else if(img->nchannels == 4){
-                tmpPixelCounter += 4;
-            }
-            else if(img->nchannels == 1){
-                tmpPixelCounter += 1;
-            }
-        }
-
-        // calculate sum of all pixel values
-        float totalValue = 0.0f;
-        for(int i=0; i < img->x *  img->y; ++i){
-            totalValue += pixelValues[i];
-        }
-
-#ifdef _DEBUG
-        std::cout << "----------------------------------------------" << std::endl;
-        std::cout << "DEBUG: Total Pixel Value: " << totalValue << std::endl;
-        std::cout << "----------------------------------------------" << std::endl;
-        std::cout << "----------------------------------------------" << std::endl;
-#endif
-
-
-
-        // normalize pixel values so sum = 1
-        for(int i=0; i < img->x *  img->y; ++i){
-            normalizedPixelValues[i] = pixelValues[i] / totalValue;
-
-#ifdef _DEBUG
-            // print array
-            std::cout << "Normalized Pixel Value: " << i << ": " << normalizedPixelValues[i] << std::endl;
-#endif
-        }
-
-
-
-        // calculate sum of all normalized pixel values, to check
-        float totalNormalizedValue = 0.0f;
-        for(int i=0; i < img->x *  img->y; ++i){
-            totalNormalizedValue += normalizedPixelValues[i];
-        }
-
-#ifdef _DEBUG
-        std::cout << "----------------------------------------------" << std::endl;
-        std::cout << "DEBUG: Total Normalized Pixel Value: " << totalNormalizedValue << std::endl;
-        std::cout << "----------------------------------------------" << std::endl;
-        std::cout << "----------------------------------------------" << std::endl;
-#endif
-
-
-
-        // calculate sum for each row
-        //img->summedRowValues.clear();
-        //img->summedRowValues.resize(img->y);
-        float summedHorizontalNormalizedValues = 0.0f;
-        int counterRow = 0;
-
-        for(int i=0; i < img->y; ++i){
-
-            summedHorizontalNormalizedValues = 0.0f;
-
-            for(int j=0; j < img->x; ++j){
-
-                summedHorizontalNormalizedValues += normalizedPixelValues[counterRow];
-                counterRow += 1;
-            }
-
-            img->summedRowValues[i] = summedHorizontalNormalizedValues;
-#ifdef _DEBUG
-            std::cout << "Summed Values row [" << i << "]: " << img->summedRowValues[i] << std::endl;
-#endif
-        }
-
-
-
-#ifdef _DEBUG
-        // calculate sum of all row values, just to debug
-        float totalNormalizedRowValue = 0.0f;
-        for(int i=0; i < img->y; ++i){
-            totalNormalizedRowValue += img->summedRowValues[i];
-        }
-        std::cout << "----------------------------------------------" << std::endl;
-        std::cout << "Debug: Summed Row Value: " << totalNormalizedRowValue << std::endl;
-        std::cout << "----------------------------------------------" << std::endl;
-#endif
-
-
-        // make array of indices
-        nbytes = img->y * sizeof(int);
-        totalBytes += nbytes;
-        AiAddMemUsage(nbytes, "zoic.temporaries");
-        int *summedRowValueCopyIndices = (int*) AiMalloc(nbytes);
-        //std::vector<int> summedRowValueCopyIndices(img->y, 0);
-        for(int i = 0; i < img->y; ++i){
-            summedRowValueCopyIndices[i] = i;
-        }
-
-        // lambda
-        //std::sort(summedRowValueCopyIndices.begin(), summedRowValueCopyIndices.begin() + img->y, arrayCompare(img->summedRowValues));
-        std::sort(summedRowValueCopyIndices, summedRowValueCopyIndices + img->y, arrayCompare(img->summedRowValues));
-
-#ifdef _DEBUG
-        // print values
-        for(int i = 0; i < img->y; ++i){
-            std::cout << "PDF row [" <<  summedRowValueCopyIndices[i] << "]: " << img->summedRowValues[summedRowValueCopyIndices[i]] << std::endl;
-        }
-
-        std::cout << "----------------------------------------------" << std::endl;
-        std::cout << "----------------------------------------------" << std::endl;
-#endif
-
-
-        // For every row, add the sum of all previous row (cumulative distribution function)
-        //img->cdfRow.clear();
-        //img->cdfRow.resize(img->y * img->x);
-        //img->rowIndices.clear();
-        //img->rowIndices.resize(img->y * img->x);
-
-        for (int i = 0; i < img->y; ++i){
-            if(i == 0){
-                img->cdfRow[i] += img->summedRowValues[summedRowValueCopyIndices[i]];
-            }
-            else{
-                img->cdfRow[i] = img->cdfRow[i-1] + img->summedRowValues[summedRowValueCopyIndices[i]];
-            }
-
-            img->rowIndices[i] = summedRowValueCopyIndices[i];
-
-#ifdef _DEBUG
-            std::cout << "CDF row [" << img->rowIndices[i] << "]: " << img->cdfRow[i] << std::endl;
-#endif
-        }
-
-#ifdef _DEBUG
-        std::cout << "----------------------------------------------" << std::endl;
-        std::cout << "----------------------------------------------" << std::endl;
-#endif
-
-
-
-        // divide pixel values of each pixel by the sum of the pixel values of that row (Normalize)
-        int rowCounter = 0;
-        int tmpCounter = 0;
-        //img->normalizedValuesPerRow.clear();
-        //img->normalizedValuesPerRow.resize(img->x * img->y);
-
-        for (int i = 0; i < img->x * img->y; ++i){
-
-            // avoid division by 0
-            if ((normalizedPixelValues[i] != 0) && (img->summedRowValues[rowCounter] != 0)){
-                img->normalizedValuesPerRow[i] = normalizedPixelValues[i] / img->summedRowValues[rowCounter];
-            }
-            else{
-                img->normalizedValuesPerRow[i] = 0;
-            }
-
-            tmpCounter += 1;
-
-            // silly counter, there must be faster ways to do this but i'm not exactly a genius
-            if (tmpCounter == img->x){
-                rowCounter += 1;
-                tmpCounter = 0;
-            }
-
-#ifdef _DEBUG
-            std::cout << "Normalized Pixel value per row: " << i << ": " << img->normalizedValuesPerRow[i] << std::endl;
-#endif
-        }
-
-#ifdef _DEBUG
-        std::cout << "----------------------------------------------" << std::endl;
-        std::cout << "----------------------------------------------" << std::endl;
-#endif
-
-
-
-        // sort column values from highest to lowest per row (probability density function)
-        nbytes = img->x * img->y * sizeof(int);
-        totalBytes += nbytes;
-        AiAddMemUsage(nbytes, "zoic.temporaries");
-        int *summedColumnValueCopyIndices = (int*) AiMalloc(nbytes);
-        //std::vector<int> summedColumnValueCopyIndices(img->x * img->y, 0);
-        for(int i = 0; i < img->x * img->y; i++){
-            summedColumnValueCopyIndices[i] = i;
-        }
-
-        // lamdba
-        for (int i = 0; i < img->x * img->y; i+=img->x){
-            //std::sort(summedColumnValueCopyIndices.begin() + i, summedColumnValueCopyIndices.begin() + i + img->x, arrayCompare(img->normalizedValuesPerRow));
-            std::sort(summedColumnValueCopyIndices + i, summedColumnValueCopyIndices + i + img->x, arrayCompare(img->normalizedValuesPerRow));
-        }
-
-#ifdef _DEBUG
-        // print values
-        for(int i = 0; i < img->x * img->y; ++i){
-            std::cout << "PDF column [" << summedColumnValueCopyIndices[i] << "]: " << img->normalizedValuesPerRow[summedColumnValueCopyIndices[i]] << std::endl;
-        }
-        std::cout << "----------------------------------------------" << std::endl;
-        std::cout << "----------------------------------------------" << std::endl;
-#endif
-
-
-        // For every column per row, add the sum of all previous columns (cumulative distribution function)
-        //img->cdfColumn.clear();
-        //img->cdfColumn.resize(img->x * img->y + 1);
-        //img->columnIndices.clear();
-        //img->columnIndices.resize(img->x * img->y + 1);
-        int cdfCounter = 0;
-
-        for (int i = 0; i < img->x * img->y; ++i){
-            if (cdfCounter == img->x) {
-                    img->cdfColumn[i] = img->normalizedValuesPerRow[summedColumnValueCopyIndices[i]];
-                    cdfCounter = 0;
-            }
-            else {
-                img->cdfColumn[i] = img->cdfColumn[i-1] + img->normalizedValuesPerRow[summedColumnValueCopyIndices[i]];
-            }
-
-            cdfCounter += 1;
-
-            img->columnIndices[i] = summedColumnValueCopyIndices[i];
-
-#ifdef _DEBUG
-            std::cout << "CDF column [" <<  img->columnIndices[i] << "]: " << img->cdfColumn[i] << std::endl;
-#endif
-         }
-
-#ifdef _DEBUG
-        std::cout << "----------------------------------------------" << std::endl;
-#endif
-        
-        // Release and untrack memory
-        AiAddMemUsage(-totalBytes, "zoic.temporaries");
-        AiFree(pixelValues);
-        AiFree(normalizedPixelValues);
-        AiFree(summedRowValueCopyIndices);
-        AiFree(summedColumnValueCopyIndices);
-    }
-}
-
-// Sample image
-void bokehSample(imageData *img, float randomNumberRow, float randomNumberColumn, float *dx, float *dy){
-#ifdef _DEBUG
-    // print random number between 0 and 1
-    std::cout << "RANDOM NUMBER ROW: " << randomNumberRow << std::endl;
-#endif
-
-    // find upper bound of random number in the array
-    float pUpperBound = *std::upper_bound(img->cdfRow, img->cdfRow + img->y, randomNumberRow);
-#ifdef _DEBUG
-    std::cout << "UPPER BOUND: " << pUpperBound << std::endl;
-#endif
-
-    // find which element of the array the upper bound is
-    int x = std::distance(img->cdfRow, std::find(img->cdfRow, img->cdfRow + img->y, pUpperBound));
-
-    // find actual pixel row
-    int actualPixelRow = img->rowIndices[x];
-
-    // recalculate pixel row so that the center pixel is (0,0) - might run into problems with images of dimensions like 2x2, 4x4, 6x6, etc
-    int recalulatedPixelRow = actualPixelRow - ((img->x - 1) / 2);
-
-#ifdef _DEBUG
-    // print values
-    std::cout << "INDEX IN CDF ROW: " << x << std::endl;
-    std::cout << "ACTUAL PIXEL ROW: " << actualPixelRow << std::endl;
-    std::cout << "RECALCULATED PIXEL ROW: " << recalulatedPixelRow << std::endl;
-    std::cout << "----------------------------------------------" << std::endl;
-    std::cout << "----------------------------------------------" << std::endl;
-
-    // print random number between 0 and 1
-    std::cout << "RANDOM NUMBER COLUMN: " << randomNumberColumn << std::endl;
-#endif
-
-    int startPixel = actualPixelRow * img->x;
-#ifdef _DEBUG
-    std::cout << "START PIXEL: " << startPixel << std::endl;
-#endif
-
-
-    // find upper bound of random number in the array
-    float pUpperBoundColumn = *std::upper_bound(img->cdfColumn + startPixel, img->cdfColumn + startPixel + img->x, randomNumberColumn);
-#ifdef _DEBUG
-    std::cout << "UPPER BOUND: " << pUpperBoundColumn << std::endl;
-#endif
-
-    // find which element of the array the upper bound is
-    int y = std::distance(img->cdfColumn, std::find(img->cdfColumn + startPixel, img->cdfColumn + startPixel + img->x, pUpperBoundColumn));
-
-    // find actual pixel column
-    int actualPixelColumn = img->columnIndices[y];
-    int relativePixelColumn = actualPixelColumn - startPixel;
-    int recalulatedPixelColumn = relativePixelColumn - ((img->y - 1) / 2);
-
-#ifdef _DEBUG
-    // print values
-    std::cout << "INDEX IN CDF COLUMN: " << y << std::endl;
-    std::cout << "ACTUAL PIXEL COLUMN: " << actualPixelColumn << std::endl;
-    std::cout << "RELATIVE PIXEL COLUMN (starting from 0): " << relativePixelColumn << std::endl;
-    std::cout << "RECALCULATED PIXEL COLUMN: " << recalulatedPixelColumn << std::endl;
-    std::cout << "----------------------------------------------" << std::endl;
-    std::cout << "----------------------------------------------" << std::endl;
-#endif
-
-    // to get the right image orientation, flip the x and y coordinates and then multiply the y values by -1 to flip the pixels vertically
-    float flippedRow = recalulatedPixelColumn;
-    float flippedColumn = recalulatedPixelRow * -1.0f;
-
-    // send values back
-    *dx = (float)flippedRow / (float)img->x * 2;
-    *dy = (float)flippedColumn / (float)img->y * 2;
-}
-
-
+// ---
 
 node_parameters {
    AiParameterFLT("sensorWidth", 3.6f); // 35mm film
@@ -785,8 +683,7 @@ node_parameters {
 
 
 node_initialize {
-   cameraData *camera = new cameraData;
-   camera->image = 0;
+   cameraData *camera = new cameraData();
    AiCameraInitialize(node, (void*)camera);
 
 }
@@ -803,22 +700,15 @@ node_update {
    // calculate aperture radius (apertureRadius = focalLength / 2*fStop)
    camera->apertureRadius = (_focalLength/10) / (2*_fStop);
 
-   if (camera->image){
-       delete camera->image;
-       camera->image = 0;
-   }
+   camera->image.invalidate();
 
    // make probability functions of the bokeh image
    if (_useImage == true){
-       camera->image = readImage(_bokehPath);
-       if(!camera->image){
+       if (!camera->image.read(_bokehPath)){
             AiMsgError("Couldn't open image!");
             AiRenderAbort();
        }
-
-       bokehProbability(camera->image);
-      }
-
+   }
 }
 
 node_finish {
@@ -855,10 +745,9 @@ camera_create_ray {
         // sample disk with proper sample distribution, lensU & lensV (positions on lens) are updated.
         if (_useImage == false){
             ConcentricSampleDisk(input->lensx, input->lensy, &lensU, &lensV);
-        }
-        else if (camera->image != 0){
+        } else {
             // sample bokeh image
-            bokehSample(camera->image, input->lensx, input->lensy, &lensU, &lensV);
+            camera->image.bokehSample(input->lensx, input->lensy, &lensU, &lensV);
         }
 
         // this creates a square bokeh!
