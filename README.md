@@ -40,7 +40,8 @@ scons [other options] with-oiio-inc=/path/to/oiio/include with-oiio-lib=/path/to
 ```
 scons [other options] mscver=12.0 
 ```
-You will need at least 12.0 as c++11 is required for now.
+
+**The flags passed to scons command are cached in a file name 'excons.cache' so that you don't need to reset them for subsequent builds. The missing flags will be fetched from the cache and the provided ones will replace the cache content.**
 
 ## Install
 
