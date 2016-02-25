@@ -133,6 +133,13 @@ struct cameraData{
     imageData *image;
 };
 
+struct arrayCompare{
+    const std::vector<float> &values;
+    inline arrayCompare(const std::vector<float> &_values) :values(_values) {}
+    inline bool operator()(int _lhs, int _rhs) const{
+        return values[_lhs] > values[_rhs];
+    }
+};
 
 // PBRT v2 source code  - Concentric disk sampling (Sampling the disk in a more uniform way than with random sampling)
 inline void ConcentricSampleDisk(float u1, float u2, float *dx, float *dy) {
@@ -422,9 +429,7 @@ void bokehProbability(imageData *img){
         }
 
         // lambda
-        std::sort(summedRowValueCopyIndices.begin(), summedRowValueCopyIndices.begin() + img->y, [&img](int _lhs, int _rhs){
-            return img->summedRowValues[_lhs] > img->summedRowValues[_rhs];
-        });
+        std::sort(summedRowValueCopyIndices.begin(), summedRowValueCopyIndices.begin() + img->y, arrayCompare(img->summedRowValues));
 
 #ifdef _DEBUG
         // print values
@@ -509,9 +514,7 @@ void bokehProbability(imageData *img){
 
         // lamdba
         for (int i = 0; i < img->x * img->y; i+=img->x){
-            std::sort(summedColumnValueCopyIndices.begin() + i, summedColumnValueCopyIndices.begin() + i + img->x, [&img]( int _lhs,  int _rhs){
-                return img->normalizedValuesPerRow[_lhs] > img->normalizedValuesPerRow[_rhs];
-            });
+            std::sort(summedColumnValueCopyIndices.begin() + i, summedColumnValueCopyIndices.begin() + i + img->x, arrayCompare(img->normalizedValuesPerRow));
         }
 
 #ifdef _DEBUG
