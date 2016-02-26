@@ -541,12 +541,18 @@ public:
         DEBUG_ONLY(std::cout << "RANDOM NUMBER ROW: " << randomNumberRow << std::endl);
 
         // find upper bound of random number in the array
-        float pUpperBound = *std::upper_bound(cdfRow, cdfRow + y, randomNumberRow);
-
-        DEBUG_ONLY(std::cout << "UPPER BOUND: " << pUpperBound << std::endl);
-
-        // find which element of the array the upper bound is
-        int r = std::distance(cdfRow, std::find(cdfRow, cdfRow + y, pUpperBound));
+        float *pUpperBound = std::upper_bound(cdfRow, cdfRow + y, randomNumberRow);
+        int r = 0;
+        
+        if (pUpperBound >= cdfRow + y){
+            //AiMsgWarning("[zoic] %f larger than last biggest cdfRow[%d] = %f", randomNumberRow, y-1, cdfRow[y-1]);
+            r = y - 1;
+        
+        } else{
+            DEBUG_ONLY(std::cout << "UPPER BOUND: " << *pUpperBound << std::endl);
+            r = int(pUpperBound - cdfRow);
+        }
+        
 
         // find actual pixel row
         int actualPixelRow = rowIndices[r];
@@ -571,12 +577,17 @@ public:
 
 
         // find upper bound of random number in the array
-        float pUpperBoundColumn = *std::upper_bound(cdfColumn + startPixel, cdfColumn + startPixel + x, randomNumberColumn);
+        float *pUpperBoundColumn = std::upper_bound(cdfColumn + startPixel, cdfColumn + startPixel + x, randomNumberColumn);
+        int c = 0;
 
-        DEBUG_ONLY(std::cout << "UPPER BOUND: " << pUpperBoundColumn << std::endl);
+        if (pUpperBoundColumn >= cdfColumn + startPixel + x){
+            //AiMsgWarning("[zoic] %f larger than last biggest cdfColumn[%d][%d] = %f", randomNumberColumn, r, x-1, cdfColumn[startPixel+x-1]);
+            c = startPixel + x - 1;
 
-        // find which element of the array the upper bound is
-        int c = std::distance(cdfColumn, std::find(cdfColumn + startPixel, cdfColumn + startPixel + x, pUpperBoundColumn));
+        } else{
+            DEBUG_ONLY(std::cout << "UPPER BOUND: " << *pUpperBoundColumn << std::endl);
+            c = int(pUpperBoundColumn - cdfColumn);
+        }
 
         // find actual pixel column
         int actualPixelColumn = columnIndices[c];
