@@ -150,8 +150,6 @@ private:
     uint8_t *pixelData;
     float *cdfRow;
     float *cdfColumn;
-    float *summedRowValues;
-    float *normalizedValuesPerRow;
     int *rowIndices;
     int *columnIndices;
     
@@ -159,7 +157,6 @@ public:
     imageData()
         : x(0), y(0), nchannels(0)
         , pixelData(0), cdfRow(0), cdfColumn(0)
-        , summedRowValues(0), normalizedValuesPerRow(0)
         , rowIndices(0), columnIndices(0) {
     }
      
@@ -178,32 +175,22 @@ public:
              pixelData = 0;
         }
         if (cdfRow){
-            AiAddMemUsage(-x * y * sizeof(float), "zoic");
+            AiAddMemUsage(-y * sizeof(float), "zoic");
             AiFree(cdfRow);
             cdfRow = 0;
         }
         if (cdfColumn){
-            AiAddMemUsage(-x * y * sizeof(float), "zoic"); // why +1
+            AiAddMemUsage(-x * y * sizeof(float), "zoic");
             AiFree(cdfColumn);
             cdfColumn = 0;
         }
-        if (summedRowValues){
-            AiAddMemUsage(-y * sizeof(float), "zoic");
-            AiFree(summedRowValues);
-            summedRowValues = 0;
-        }
-        if (normalizedValuesPerRow){
-            AiAddMemUsage(-x * y * sizeof(float), "zoic");
-            AiFree(normalizedValuesPerRow);
-            normalizedValuesPerRow = 0;
-        }
         if (rowIndices){
-            AiAddMemUsage(-x * y * sizeof(int), "zoic");
+            AiAddMemUsage(-y * sizeof(int), "zoic");
             AiFree(rowIndices);
             rowIndices = 0;
         }
         if (columnIndices){
-            AiAddMemUsage(-x * y * sizeof(int), "zoic"); // why +1
+            AiAddMemUsage(-x * y * sizeof(int), "zoic");
             AiFree(columnIndices);
             columnIndices = 0;
         }
@@ -372,7 +359,8 @@ public:
         // calculate sum for each row
         nbytes = y * sizeof(float);
         AiAddMemUsage(nbytes, "zoic");
-        summedRowValues = (float*) AiMalloc(nbytes);
+        float *summedRowValues = (float*) AiMalloc(nbytes);
+        totalTempBytes += nbytes;
 
         for(int i=0, k=0; i < y; ++i){
 
@@ -402,20 +390,19 @@ public:
         // make array of indices
         nbytes = y * sizeof(int);
         AiAddMemUsage(nbytes, "zoic");
-        int *summedRowValueCopyIndices = (int*) AiMalloc(nbytes);
-        totalTempBytes += nbytes;
-        
+        rowIndices = (int*) AiMalloc(nbytes);
+
         for(int i = 0; i < y; ++i){
-            summedRowValueCopyIndices[i] = i;
+            rowIndices[i] = i;
         }
 
-        std::sort(summedRowValueCopyIndices, summedRowValueCopyIndices + y, arrayCompare(summedRowValues));
+        std::sort(rowIndices, rowIndices + y, arrayCompare(summedRowValues));
 
 
         DEBUG_ONLY({
             // print values
             for(int i = 0; i < y; ++i){
-                std::cout << "PDF row [" <<  summedRowValueCopyIndices[i] << "]: " << summedRowValues[summedRowValueCopyIndices[i]] << std::endl;
+                std::cout << "PDF row [" <<  rowIndices[i] << "]: " << summedRowValues[rowIndices[i]] << std::endl;
             }
             std::cout << "----------------------------------------------" << std::endl;
             std::cout << "----------------------------------------------" << std::endl;
@@ -423,21 +410,15 @@ public:
 
 
         // For every row, add the sum of all previous row (cumulative distribution function)
-        nbytes = npixels * sizeof(float);
+        nbytes = y * sizeof(float);
         AiAddMemUsage(nbytes, "zoic");
         cdfRow = (float*) AiMalloc(nbytes);
-        
-        nbytes = npixels * sizeof(int);
-        AiAddMemUsage(nbytes, "zoic");
-        rowIndices = (int*) AiMalloc(nbytes);
 
         float prevVal = 0.0f;
 
         for (int i = 0; i < y; ++i){
-            cdfRow[i] = prevVal + summedRowValues[summedRowValueCopyIndices[i]];
+            cdfRow[i] = prevVal + summedRowValues[rowIndices[i]];
             prevVal = cdfRow[i];
-            
-            rowIndices[i] = summedRowValueCopyIndices[i];
 
             DEBUG_ONLY(std::cout << "CDF row [" << rowIndices[i] << "]: " << cdfRow[i] << std::endl);
         }
@@ -449,7 +430,8 @@ public:
         
         nbytes = npixels * sizeof(float);
         AiAddMemUsage(nbytes, "zoic");
-        normalizedValuesPerRow = (float*) AiMalloc(nbytes);
+        float *normalizedValuesPerRow = (float*) AiMalloc(nbytes);
+        totalTempBytes += nbytes;
         
         // divide pixel values of each pixel by the sum of the pixel values of that row (Normalize)
         for (int r = 0, i = 0; r < y; ++r){
@@ -473,45 +455,38 @@ public:
 
         // sort column values from highest to lowest per row (probability density function)
         nbytes = npixels * sizeof(int);
-        totalTempBytes += nbytes;
         AiAddMemUsage(nbytes, "zoic");
-        int *summedColumnValueCopyIndices = (int*) AiMalloc(nbytes);
+        columnIndices = (int*) AiMalloc(nbytes);
         
         for(int i = 0; i < npixels; i++){
-            summedColumnValueCopyIndices[i] = i;
+            columnIndices[i] = i;
         }
 
         for (int i = 0; i < npixels; i+=x){
-            std::sort(summedColumnValueCopyIndices + i, summedColumnValueCopyIndices + i + x, arrayCompare(normalizedValuesPerRow));
+            std::sort(columnIndices + i, columnIndices + i + x, arrayCompare(normalizedValuesPerRow));
         }
 
         DEBUG_ONLY({
             // print values
             for(int i = 0; i < npixels; ++i){
-                std::cout << "PDF column [" << summedColumnValueCopyIndices[i] << "]: " << normalizedValuesPerRow[summedColumnValueCopyIndices[i]] << std::endl;
+                std::cout << "PDF column [" << columnIndices[i] << "]: " << normalizedValuesPerRow[columnIndices[i]] << std::endl;
             }
             std::cout << "----------------------------------------------" << std::endl;
             std::cout << "----------------------------------------------" << std::endl;
         })
 
         // For every column per row, add the sum of all previous columns (cumulative distribution function)
-        nbytes = npixels * sizeof(float); // why +1?
+        nbytes = npixels * sizeof(float);
         AiAddMemUsage(nbytes, "zoic");
         cdfColumn = (float*) AiMalloc(nbytes);
-        
-        nbytes = npixels * sizeof(int); // why +1?
-        AiAddMemUsage(nbytes, "zoic");
-        columnIndices = (int*) AiMalloc(nbytes);
         
         for (int r = 0, i = 0; r < y; ++r){
             prevVal = 0.0f;
             
             for (int c = 0; c < x; ++c, ++i){
-                cdfColumn[i] = prevVal + normalizedValuesPerRow[summedColumnValueCopyIndices[i]];
+                cdfColumn[i] = prevVal + normalizedValuesPerRow[columnIndices[i]];
                 prevVal = cdfColumn[i];
-                
-                columnIndices[i] = summedColumnValueCopyIndices[i];
-                
+
                 DEBUG_ONLY(std::cout << "CDF column [" <<  columnIndices[i] << "]: " << cdfColumn[i] << std::endl);
             }
         }
@@ -523,8 +498,8 @@ public:
         
         AiFree(pixelValues);
         AiFree(normalizedPixelValues);
-        AiFree(summedRowValueCopyIndices);
-        AiFree(summedColumnValueCopyIndices);
+        AiFree(summedRowValues);
+        AiFree(normalizedValuesPerRow);
     }
     
     // Sample image
