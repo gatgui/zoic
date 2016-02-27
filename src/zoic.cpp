@@ -120,8 +120,6 @@ struct imageData{
      std::vector<uint8_t> pixelData;
      std::vector<float> cdfRow;
      std::vector<float> cdfColumn;
-     std::vector<float> summedRowValues;
-     std::vector<float> normalizedValuesPerRow;
      std::vector<int> rowIndices;
      std::vector<int> columnIndices;
 };
@@ -320,6 +318,8 @@ void bokehProbability(imageData *img){
         // initialize arrays
         std::vector<float> pixelValues(img->x * img->y, 0.0f);
         std::vector<float> normalizedPixelValues(img->x * img->y, 0.0f);
+        std::vector<float> summedRowValues(img->y, 0.0f);
+        std::vector<float> normalizedValuesPerRow(img->x * img->y, 0.0f);
 
         // for every pixel, stuff going wrong here
         int tmpPixelCounter = 0;
@@ -387,8 +387,6 @@ void bokehProbability(imageData *img){
 
 
         // calculate sum for each row
-        img->summedRowValues.clear();
-        img->summedRowValues.resize(img->y);
         float summedHorizontalNormalizedValues = 0.0f;
         int counterRow = 0;
 
@@ -402,9 +400,9 @@ void bokehProbability(imageData *img){
                 counterRow += 1;
             }
 
-            img->summedRowValues[i] = summedHorizontalNormalizedValues;
+            summedRowValues[i] = summedHorizontalNormalizedValues;
 #ifdef _DEBUG
-            std::cout << "Summed Values row [" << i << "]: " << img->summedRowValues[i] << std::endl;
+            std::cout << "Summed Values row [" << i << "]: " << summedRowValues[i] << std::endl;
 #endif
         }
 
@@ -414,7 +412,7 @@ void bokehProbability(imageData *img){
         // calculate sum of all row values, just to debug
         float totalNormalizedRowValue = 0.0f;
         for(int i=0; i < img->y; ++i){
-            totalNormalizedRowValue += img->summedRowValues[i];
+            totalNormalizedRowValue += summedRowValues[i];
         }
         std::cout << "----------------------------------------------" << std::endl;
         std::cout << "Debug: Summed Row Value: " << totalNormalizedRowValue << std::endl;
@@ -429,12 +427,12 @@ void bokehProbability(imageData *img){
         }
 
         // lambda
-        std::sort(summedRowValueCopyIndices.begin(), summedRowValueCopyIndices.begin() + img->y, arrayCompare(img->summedRowValues));
+        std::sort(summedRowValueCopyIndices.begin(), summedRowValueCopyIndices.begin() + img->y, arrayCompare(summedRowValues));
 
 #ifdef _DEBUG
         // print values
         for(int i = 0; i < img->y; ++i){
-            std::cout << "PDF row [" <<  summedRowValueCopyIndices[i] << "]: " << img->summedRowValues[summedRowValueCopyIndices[i]] << std::endl;
+            std::cout << "PDF row [" <<  summedRowValueCopyIndices[i] << "]: " << summedRowValues[summedRowValueCopyIndices[i]] << std::endl;
         }
 
         std::cout << "----------------------------------------------" << std::endl;
@@ -450,10 +448,10 @@ void bokehProbability(imageData *img){
 
         for (int i = 0; i < img->y; ++i){
             if(i == 0){
-                img->cdfRow[i] += img->summedRowValues[summedRowValueCopyIndices[i]];
+                img->cdfRow[i] += summedRowValues[summedRowValueCopyIndices[i]];
             }
             else{
-                img->cdfRow[i] = img->cdfRow[i-1] + img->summedRowValues[summedRowValueCopyIndices[i]];
+                img->cdfRow[i] = img->cdfRow[i-1] + summedRowValues[summedRowValueCopyIndices[i]];
             }
 
             img->rowIndices[i] = summedRowValueCopyIndices[i];
@@ -473,17 +471,15 @@ void bokehProbability(imageData *img){
         // divide pixel values of each pixel by the sum of the pixel values of that row (Normalize)
         int rowCounter = 0;
         int tmpCounter = 0;
-        img->normalizedValuesPerRow.clear();
-        img->normalizedValuesPerRow.resize(img->x * img->y);
 
         for (int i = 0; i < img->x * img->y; ++i){
 
             // avoid division by 0
-            if ((normalizedPixelValues[i] != 0) && (img->summedRowValues[rowCounter] != 0)){
-                img->normalizedValuesPerRow[i] = normalizedPixelValues[i] / img->summedRowValues[rowCounter];
+            if ((normalizedPixelValues[i] != 0) && (summedRowValues[rowCounter] != 0)){
+                normalizedValuesPerRow[i] = normalizedPixelValues[i] / summedRowValues[rowCounter];
             }
             else{
-                img->normalizedValuesPerRow[i] = 0;
+                normalizedValuesPerRow[i] = 0;
             }
 
             tmpCounter += 1;
@@ -495,7 +491,7 @@ void bokehProbability(imageData *img){
             }
 
 #ifdef _DEBUG
-            std::cout << "Normalized Pixel value per row: " << i << ": " << img->normalizedValuesPerRow[i] << std::endl;
+            std::cout << "Normalized Pixel value per row: " << i << ": " << normalizedValuesPerRow[i] << std::endl;
 #endif
         }
 
@@ -514,13 +510,13 @@ void bokehProbability(imageData *img){
 
         // lamdba
         for (int i = 0; i < img->x * img->y; i+=img->x){
-            std::sort(summedColumnValueCopyIndices.begin() + i, summedColumnValueCopyIndices.begin() + i + img->x, arrayCompare(img->normalizedValuesPerRow));
+            std::sort(summedColumnValueCopyIndices.begin() + i, summedColumnValueCopyIndices.begin() + i + img->x, arrayCompare(normalizedValuesPerRow));
         }
 
 #ifdef _DEBUG
         // print values
         for(int i = 0; i < img->x * img->y; ++i){
-            std::cout << "PDF column [" << summedColumnValueCopyIndices[i] << "]: " << img->normalizedValuesPerRow[summedColumnValueCopyIndices[i]] << std::endl;
+            std::cout << "PDF column [" << summedColumnValueCopyIndices[i] << "]: " << normalizedValuesPerRow[summedColumnValueCopyIndices[i]] << std::endl;
         }
         std::cout << "----------------------------------------------" << std::endl;
         std::cout << "----------------------------------------------" << std::endl;
@@ -536,11 +532,11 @@ void bokehProbability(imageData *img){
 
         for (int i = 0; i < img->x * img->y; ++i){
             if (cdfCounter == img->x) {
-                    img->cdfColumn[i] = img->normalizedValuesPerRow[summedColumnValueCopyIndices[i]];
+                    img->cdfColumn[i] = normalizedValuesPerRow[summedColumnValueCopyIndices[i]];
                     cdfCounter = 0;
             }
             else {
-                img->cdfColumn[i] = img->cdfColumn[i-1] + img->normalizedValuesPerRow[summedColumnValueCopyIndices[i]];
+                img->cdfColumn[i] = img->cdfColumn[i-1] + normalizedValuesPerRow[summedColumnValueCopyIndices[i]];
             }
 
             cdfCounter += 1;
