@@ -215,10 +215,6 @@ public:
             return false;
         }
 
-        if (nc < 3){
-            return false;
-        }
-        
         x = int(iw);
         y = int(ih);
         nchannels = int(nc);
@@ -247,10 +243,6 @@ public:
         }
 
         const OpenImageIO::ImageSpec &spec = in->spec();
-        
-        if (spec.nchannels < 3){
-            return false;
-        }
         
         x = spec.width;
         y = spec.height;
@@ -315,19 +307,19 @@ public:
         totalTempBytes += nbytes;
         
         int npixels = x * y;
+        int o1 = (nchannels >= 2 ? 1 : 0);
+        int o2 = (nchannels >= 3 ? 2 : o1);
         float totalValue = 0.0f;
         
         // for every pixel, stuff going wrong here
-        for (int i=0, j=0; i < npixels; ++i){
+        for (int i=0, j=0; i < npixels; ++i, j+=nchannels){
             // store pixel value in array
             // calculate luminance [Y = 0.3 R + 0.59 G + 0.11 B]
-            pixelValues[i] = (pixelData[j] * 0.3) + (pixelData[j+1] * 0.59) + (pixelData[j+2] * 0.11f);
+            pixelValues[i] = (pixelData[j] * 0.3) + (pixelData[j+o1] * 0.59) + (pixelData[j+o2] * 0.11f);
             
             totalValue += pixelValues[i];
             
             DEBUG_ONLY(std::cout << "Pixel Luminance: " << i << " -> " << pixelValues[i] << std::endl);
-            
-            j += nchannels;
         }
         
         DEBUG_ONLY({
