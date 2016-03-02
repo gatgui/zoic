@@ -96,7 +96,7 @@ createNode camera -n "renderCamShape" -p "renderCam";
 	setAttr ".dr" yes;
 	setAttr ".ai_aperture_size" 0.0099999997764825821;
 	setAttr ".ai_edof" yes;
-	setAttr ".ai_translator" -type "string" "zenoCamera";
+	setAttr ".ai_translator" -type "string" "zoic";
 createNode transform -n "spheres_geo";
 	rename -uid "88AA38C0-0000-57E4-56B8-D66C00000405";
 createNode mesh -n "spheres_geoShape" -p "spheres_geo";
