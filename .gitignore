@@ -1,8 +1,8 @@
 university/*
-src/imgs/*
+tests/*.exr
+*.exr
 excons.cache
 *.dblite
-*.exr
 release/
 debug/
 .build/

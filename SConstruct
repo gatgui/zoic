@@ -36,8 +36,8 @@ zoic = {"name": "zoic",
         "incdirs": incdirs,
         "libdirs": libdirs,
         "libs": libs,
-        "install": {"bin": ["bin/zoic.mtd"],
-                    "ae": ["ae/aiZoicTemplate.py"]},
+        "install": {"bin": ["src/zoic.mtd"],
+                    "ae": ["maya/ae/aiZoicTemplate.py"]},
         "custom": [arnold.Require]}
 
 excons.DeclareTargets(env, [zoic])
