@@ -1,4 +1,5 @@
 import sys
+import glob
 import excons
 from excons.tools import arnold
 
@@ -37,6 +38,7 @@ zoic = {"name": "zoic",
         "libdirs": libdirs,
         "libs": libs,
         "install": {"bin": ["src/zoic.mtd"],
+                    "scripts": glob.glob("maya/scripts/*.mel"),
                     "ae": ["maya/ae/aiZoicTemplate.py"]},
         "custom": [arnold.Require]}
 
