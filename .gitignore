@@ -1,10 +1,8 @@
 university/*
-src/imgs/*
-tests/hdr_nightscape.exr
-tests/spheres.exr
+tests/*.exr
+*.exr
 excons.cache
 *.dblite
-*.exr
 release/
 debug/
 .build/

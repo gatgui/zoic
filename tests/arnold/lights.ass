@@ -54,7 +54,7 @@ zoic
  focalDistance 115
  opticalVignetting 8
  useImage off
- bokehPath "imgs/shapes_library/bokeh_18.jpg"
+ bokehPath "tests/images/shapes/bokeh_18.jpg"
  matrix
  0.312334925 0 -0.949972034 0
  0.153605282 -0.986840844 0.0505028479 0
@@ -110,7 +110,7 @@ driver_exr
 image
 {
  name aiImage1
- filename "imgs/night2.pfm"
+ filename "tests/images/night2.pfm"
  filter "smart_bicubic"
  mipmap_bias 0
  single_channel off
