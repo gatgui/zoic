@@ -1,8 +1,12 @@
 university/*
 tests/*.exr
-*.exr
+/*.exr
+/*.png
+/*.ass
 excons.cache
 *.dblite
 release/
 debug/
 .build/
+src/Makefile
+
