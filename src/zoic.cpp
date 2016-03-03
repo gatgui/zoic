@@ -312,7 +312,7 @@ public:
         for (int i=0, j=0; i < npixels; ++i, j+=nchannels){
             // store pixel value in array
             // calculate luminance [Y = 0.3 R + 0.59 G + 0.11 B]
-            pixelValues[i] = (pixelData[j] * 0.3f) + (pixelData[j+o1] * 0.59f) + (pixelData[j+o2] * 0.11f);
+            pixelValues[i] = float((pixelData[j] * 0.3) + (pixelData[j+o1] * 0.59) + (pixelData[j+o2] * 0.11));
             
             totalValue += pixelValues[i];
             
@@ -773,11 +773,12 @@ camera_create_ray {
     }
 
     // control to go light stops up and down
+    float e2 = _exposureControl * _exposureControl;
     if (_exposureControl > 0){
-        output->weight *= 1.0f + (_exposureControl * _exposureControl);
+        output->weight *= 1.0f + e2;
     }
     else if (_exposureControl < 0){
-        output->weight *= 1.0f / (1.0f + (-_exposureControl * -_exposureControl));
+        output->weight *= 1.0f / (1.0f + e2);
     }
 
     // not sure if needed, but can't hurt. Taken from solidangle website.
