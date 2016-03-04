@@ -26,7 +26,13 @@ if arniver[0] < 4 or (arniver[0] == 4 and (arniver[1] < 2 or (arniver[1] == 2 an
     libdirs.append(oiio_lib)
     libs.append("OpenImageIO")
 else:
-    defs.append("NO_OIIO")
+    oiio_inc, oiio_lib = excons.GetDirs("oiio", noexc=True, silent=True)
+    if oiio_inc or oiio_lib:
+        incdirs.append(oiio_inc)
+        libdirs.append(oiio_lib)
+        libs.append("OpenImageIO")
+    else:
+        defs.append("NO_OIIO")
 
 zoic = {"name": "zoic",
         "type": "dynamicmodule",

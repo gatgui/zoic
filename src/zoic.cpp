@@ -91,12 +91,12 @@
 #  endif
 #  ifdef AITEXTURELOAD_PROTO2
 inline bool LoadTexture(const AtString path, void *pixelData){
-    return AiTextureLoad(path, false, 0, pixelData);
+    return AiTextureLoad(path, true, 0, pixelData);
 }
 #  else
 #    ifdef AITEXTURELOAD_PROTO1
 inline bool LoadTexture(const AtString path, void *pixelData){
-    return AiTextureLoad(path, false,  pixelData);
+    return AiTextureLoad(path, true,  pixelData);
 }
 #    else
 inline bool LoadTexture(const AtString path, void *pixelData){
@@ -144,7 +144,7 @@ class imageData{
 private:
     int x, y;
     int nchannels;
-    AtByte *pixelData;
+    float *pixelData;
     float *cdfRow;
     float *cdfColumn;
     int *rowIndices;
@@ -167,9 +167,9 @@ public:
      
     void invalidate(){
         if (pixelData){
-            AiAddMemUsage(-x * y * nchannels * sizeof(AtByte), "zoic");
-             AiFree(pixelData);
-             pixelData = 0;
+            AiAddMemUsage(-x * y * nchannels * sizeof(float), "zoic");
+            AiFree(pixelData);
+            pixelData = 0;
         }
         if (cdfRow){
             AiAddMemUsage(-y * sizeof(float), "zoic");
@@ -216,9 +216,9 @@ public:
         y = int(ih);
         nchannels = int(nc);
         
-        nbytes = x * y * nchannels * sizeof(AtByte);
+        nbytes = x * y * nchannels * sizeof(float);
         AiAddMemUsage(nbytes, "zoic");
-        pixelData = (AtByte*) AiMalloc(nbytes);
+        pixelData = (float*) AiMalloc(nbytes);
 
         if (!LoadTexture(path, pixelData)){
             invalidate();
@@ -245,11 +245,11 @@ public:
         y = spec.height;
         nchannels = spec.nchannels;
 
-        nbytes = x * y * nchannels * sizeof(AtByte);
+        nbytes = x * y * nchannels * sizeof(float);
         AiAddMemUsage(nbytes, "zoic");
-        pixelData = (AtByte*) AiMalloc(nbytes);
+        pixelData = (float*) AiMalloc(nbytes);
 
-        in->read_image(OpenImageIO::TypeDesc::UINT8, pixelData);
+        in->read_image(OpenImageIO::TypeDesc::FLOAT, pixelData);
         in->close();
         delete in;
 
@@ -266,7 +266,7 @@ public:
             for (int i = 0, j = 0; i < npixels; i++){
                 std::cout << "[";
                 for (int k = 0; k < nchannels; k++, j++){
-                    std::cout << (int) pixelData[j];
+                    std::cout << pixelData[j];
                     if (k + 1 < nchannels){
                         std::cout << ", ";
                     }
@@ -312,7 +312,7 @@ public:
         for (int i=0, j=0; i < npixels; ++i, j+=nchannels){
             // store pixel value in array
             // calculate luminance [Y = 0.3 R + 0.59 G + 0.11 B]
-            pixelValues[i] = float((pixelData[j] * 0.3) + (pixelData[j+o1] * 0.59) + (pixelData[j+o2] * 0.11));
+            pixelValues[i] = pixelData[j] * 0.3f + pixelData[j+o1] * 0.59f + pixelData[j+o2] * 0.11f;
             
             totalValue += pixelValues[i];
             
