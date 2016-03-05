@@ -5,6 +5,7 @@ tests/*.exr
 /*.ass
 excons.cache
 *.dblite
+*.pyc
 release/
 debug/
 .build/
