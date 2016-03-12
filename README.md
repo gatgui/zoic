@@ -50,8 +50,9 @@ Set the following environment variables, replacing "$PATH_TO_ZOIC" with the actu
 ### Linux/OSX
 
 ```
-export ARNOLD_PLUGIN_PATH=$ARNOLD_PLUGIN_PATH:$PATH_TO_ZOIC/bin
-export MTOA_TEMPLATES_PATH=$MTOA_TEMPLATES_PATH:$PATH_TO_ZOIC/ae
+export ARNOLD_PLUGIN_PATH=$ARNOLD_PLUGIN_PATH:$PATH_TO_ZOIC/shaders
+export MTOA_TEMPLATES_PATH=$MTOA_TEMPLATES_PATH:$PATH_TO_ZOIC/maya/ae
+export MAYA_SCRIPT_PATH=$MAYA_SCRIPT_PATH:$PATH_TO_ZOIC/maya/scripts
 ```
 
 ### Windows
@@ -59,12 +60,13 @@ export MTOA_TEMPLATES_PATH=$MTOA_TEMPLATES_PATH:$PATH_TO_ZOIC/ae
 ```
 set ARNOLD_PLUGIN_PATH=%ARNOLD_PLUGIN_PATH%;$PATH_TO_ZOIC/bin
 set MTOA_TEMPLATES_PATH=%MTOA_TEMPLATES_PATH%;$PATH_TO_ZOIC/ae
+set MAYA_SCRIPT_PATH=%MAYA_SCRIPT_PATH%;$PATH_TO_ZOIC/maya/scripts
 ```
 
 It’s also possible to copy the files into your MtoA install, but I personally prefer the first option. Just copy the files like this:
 
-- Files in the 'bin' folder go to [$MTOA_LOCATION]/shaders
-- Files in the 'ae' folde go to [$MTOA_LOCATION]/scripts/mtoa/ui/ae 
+- Files in the 'shaders' folder go to [$MTOA_LOCATION]/shaders
+- Files in the 'maya/ae' folder go to [$MTOA_LOCATION]/scripts/mtoa/ui/ae 
 
 ## Credits
 Special thanks to Marc-Antoine Desjardins for the help with the image sampling. I owe this guy quite a few beers by now.

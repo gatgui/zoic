@@ -36,16 +36,16 @@ else:
 
 zoic = {"name": "zoic",
         "type": "dynamicmodule",
-        "prefix": "bin",
+        "prefix": "shaders",
         "ext": arnold.PluginExt(),
         "srcs": ["src/zoic.cpp"],
         "defs": defs,
         "incdirs": incdirs,
         "libdirs": libdirs,
         "libs": libs,
-        "install": {"bin": ["src/zoic.mtd"],
-                    "scripts": glob.glob("maya/scripts/*.mel"),
-                    "ae": ["maya/ae/aiZoicTemplate.py"]},
+        "install": {"shaders": ["src/zoic.mtd"],
+                    "maya": glob.glob("maya/*"),
+                    "c4d": glob.glob("c4d/*")},
         "custom": [arnold.Require]}
 
 excons.DeclareTargets(env, [zoic])
