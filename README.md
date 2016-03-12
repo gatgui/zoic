@@ -43,6 +43,15 @@ scons [other options] mscver=12.0
 
 **The flags passed to scons command are cached in a file name 'excons.cache' so that you don't need to reset them for subsequent builds. The missing flags will be fetched from the cache and the provided ones will replace the cache content.**
 
+## Packaging
+
+```
+scons [other options] package=1 (package-type=zip|tgz)
+```
+
+- The package name will be 'zoic-[version]_[platform].[type]'
+- The package type defaults to zip on windows, tgz otherwise
+
 ## Install
 
 Set the following environment variables, replacing "$PATH_TO_ZOIC" with the actual path on your machine. 
