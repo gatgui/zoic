@@ -1,14 +1,13 @@
-university/*
-tests/*.exr
-/src/imgs
-/*.exr
-/*.png
-/*.ass
-excons.cache
-*.dblite
+*.exr
+*.png
+*.ass
 *.pyc
-release/
-debug/
-.build/
-src/Makefile
+src/zoic.dylib
+tests/*
+build/*
 
+/.build
+/release
+/debug
+*.dblite
+excons.cache

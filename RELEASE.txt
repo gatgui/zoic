@@ -1,6 +1,9 @@
 Zoic <version>
 Compiled with Arnold <arnold_version>
 
+2.0.0
+   - Ray traced lens model
+
 1.1.2
    - Change directory layout.
    - Add Cinema4D resources.

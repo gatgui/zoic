@@ -4,15 +4,16 @@ import glob
 import excons
 from excons.tools import arnold
 
-excons.SetArgument("no-arch", 1)
+#excons.SetArgument("no-arch", 1)
+excons.SetArgument("use-c++11", 1)
+
 
 env = excons.MakeBaseEnv()
 
-version = "1.1.2"
+version = "2.0.0"
 
 if sys.platform != "win32":
     env.Append(CPPFLAGS=" -Wno-unused-parameter")
-
 
 # Arnold 4.2.9.0 provides api AiTextureLoad to read texture data
 # Arnold 4.2.10.0 adds a new parameter to the function above
@@ -23,19 +24,9 @@ libdirs = []
 libs = []
 
 arniver = arnold.Version()
-if arniver[0] < 4 or (arniver[0] == 4 and (arniver[1] < 2 or (arniver[1] == 2 and arniver[3] < 9))):
-    oiio_inc, oiio_lib = excons.GetDirs("oiio", noexc=False)
-    incdirs.append(oiio_inc)
-    libdirs.append(oiio_lib)
-    libs.append("OpenImageIO")
-else:
-    oiio_inc, oiio_lib = excons.GetDirs("oiio", noexc=True, silent=True)
-    if oiio_inc or oiio_lib:
-        incdirs.append(oiio_inc)
-        libdirs.append(oiio_lib)
-        libs.append("OpenImageIO")
-    else:
-        defs.append("NO_OIIO")
+if arniver[0] < 4 or (arniver[0] == 4 and (arniver[1] < 2 or (arniver[1] == 2 and arniver[3] < 10))):
+    print("Arnold 4.2.10.0 at least required")
+    sys.exit(1)
 
 def Package(env, target, source):
     global version
