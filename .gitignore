@@ -1,9 +1,7 @@
 *.exr
 *.png
-*.ass
 *.pyc
 src/zoic.dylib
-tests/*
 build/*
 
 /.build
