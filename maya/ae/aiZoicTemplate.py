@@ -46,42 +46,62 @@ class aiZoicTemplate(templates.AttributeTemplate):
         cmds.textFieldButtonGrp("filenameLensDataGrp", edit=True, text=cmds.getAttr(nodeName) )
 
 
-
-
     def setup(self):
+        self.beginLayout("General", collapse=False)
         self.addControl("aiSensorWidth", label="Sensor Width (cm)")
         self.addControl("aiSensorHeight", label="Sensor Height (cm)")
-        self.addControl("aiFocalLength", label="Focal Length (mm)")
+        self.addControl("aiFocalLength", label="Focal Length (cm)")
         self.addControl("aiFStop", label="F-stop")
         self.addControl("aiFocalDistance", label="Focus distance (cm)")
+        self.addControl("aiLensModel", label="Lens Model")
+        self.endLayout()
 
         self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
 
+        self.beginLayout("Image based bokeh shape", collapse=False)
         self.addControl("aiUseImage", label="Enable Image based bokeh")
-        self.addCustom('aiBokehPath', self.filenameNewBokeh, self.filenameReplaceBokeh)
+        self.addCustom("aiBokehPath", self.filenameNewBokeh, self.filenameReplaceBokeh)
+        self.endLayout()
 
         self.addSeparator()
-
-        self.addControl("aiKolb", label="Camera model [off = thin-lens / on = raytraced]")
-
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
         self.addSeparator()
 
-        self.addCustom('aiLensDataPath', self.filenameNewLensData, self.filenameReplaceLensData)
-        self.addControl("aiKolbSamplingMethod", label="Raytraced Sampling Method")
+        self.beginLayout("Raytraced model", collapse=False)
+        self.addCustom("aiLensDataPath", self.filenameNewLensData, self.filenameReplaceLensData)
+        self.addControl("aiKolbSamplingLUT", label="Precalculate LUT")
+        self.endLayout()
 
         self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
 
+        self.beginLayout("Thin-lens model", collapse=False)
         self.addControl("aiUseDof", label="Enable thin-lens depth of field")
         self.addControl("aiOpticalVignettingDistance", label="Optical Vignetting Distance")
         self.addControl("aiOpticalVignettingRadius", label="Optical Vignetting Radius")
-        self.addControl("aiHighlightWidth", label="Highlight Width")
-        self.addControl("aiHighlightStrength", label="Highlight Strength")
+        self.endLayout()
 
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
+        self.addSeparator()
         self.addSeparator()
 
         self.addControl("aiExposureControl", label="Exposure")
 
-        self.addSeparator()
 
 
 templates.registerTranslatorUI(aiZoicTemplate, "camera", "zoic")
