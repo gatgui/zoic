@@ -75,6 +75,7 @@ def Package(env, target, source):
             f.write(shadermtd, "shaders/" + os.path.basename(shadermtd))
             r_write(f, outdir + "/maya", "maya")
             r_write(f, outdir + "/c4d", "c4d")
+            r_write(f, outdir + "/data", "data")
             f.write(outdir + "/RELEASE.txt", "RELEASE.txt")
     
     elif packagetype == "tgz":
@@ -85,6 +86,7 @@ def Package(env, target, source):
             f.add(shadermtd, "shaders/" + os.path.basename(shadermtd))
             f.add(outdir + "/maya", "maya")
             f.add(outdir + "/c4d", "c4d")
+            f.add(outdir + "/data", "data")
             f.add(outdir + "/RELEASE.txt", "RELEASE.txt")
     
     else:
@@ -103,7 +105,9 @@ zoic = {"name": "zoic",
         "libs": libs,
         "install": {"shaders": ["src/zoic.mtd"],
                     "maya": glob.glob("maya/*"),
-                    "c4d": glob.glob("c4d/*")},
+                    "c4d": glob.glob("c4d/*"),
+                    "data/lenses": glob.glob("lenses_tabular/*.dat"),
+                    "data/bokeh": glob.glob("bokeh_images/*.jpg")},
         "post": [] if int(ARGUMENTS.get("package", "0")) == 0 else [Package],
         "custom": [arnold.Require]}
 
