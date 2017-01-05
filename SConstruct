@@ -20,6 +20,14 @@ incdirs = []
 libdirs = []
 libs = []
 
+# Zeno specific flags
+if excons.GetArgument("draw", 0, int) != 0:
+    defs.append("_DRAW")
+if excons.GetArgument("work", 0, int) != 0:
+    defs.append("_WORK")
+if excons.GetArgument("macbook", 0, int) != 0:
+    defs.append("_MACBOOK")
+
 arniver = arnold.Version()
 if arniver[0] < 4 or (arniver[0] == 4 and (arniver[1] < 2 or (arniver[1] == 2 and arniver[3] < 10))):
     print("Arnold 4.2.10.0 at least required")
