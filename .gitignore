@@ -7,5 +7,6 @@ build/*
 /.build
 /release
 /debug
+/eco
 *.dblite
 excons.cache

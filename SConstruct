@@ -79,8 +79,8 @@ def Package(env, target, source):
                 f.write(src, dst)
         
         with zipfile.ZipFile(outpath, "w") as f:
-            f.write(shaderbin, "shaders/" + os.path.basename(shaderbin))
-            f.write(shadermtd, "shaders/" + os.path.basename(shadermtd))
+            f.write(shaderbin, "arnold/" + os.path.basename(shaderbin))
+            f.write(shadermtd, "arnold/" + os.path.basename(shadermtd))
             r_write(f, outdir + "/maya", "maya")
             r_write(f, outdir + "/c4d", "c4d")
             r_write(f, outdir + "/data", "data")
@@ -90,8 +90,8 @@ def Package(env, target, source):
         import tarfile
         
         with tarfile.open(outpath, "w:gz") as f:
-            f.add(shaderbin, "shaders/" + os.path.basename(shaderbin))
-            f.add(shadermtd, "shaders/" + os.path.basename(shadermtd))
+            f.add(shaderbin, "arnold/" + os.path.basename(shaderbin))
+            f.add(shadermtd, "arnold/" + os.path.basename(shadermtd))
             f.add(outdir + "/maya", "maya")
             f.add(outdir + "/c4d", "c4d")
             f.add(outdir + "/data", "data")
@@ -104,19 +104,36 @@ def Package(env, target, source):
 
 zoic = {"name": "zoic",
         "type": "dynamicmodule",
-        "prefix": "shaders",
+        "prefix": "arnold",
         "ext": arnold.PluginExt(),
         "srcs": ["src/zoic.cpp"],
         "defs": defs,
         "incdirs": incdirs,
         "libdirs": libdirs,
         "libs": libs,
-        "install": {"shaders": ["src/zoic.mtd"],
-                    "maya": glob.glob("maya/*"),
-                    "c4d": glob.glob("c4d/*"),
-                    "data/lenses": glob.glob("lenses_tabular/*.dat"),
-                    "data/bokeh": glob.glob("bokeh_images/*.jpg")},
         "post": [] if int(ARGUMENTS.get("package", "0")) == 0 else [Package],
         "custom": [arnold.Require]}
 
-excons.DeclareTargets(env, [zoic])
+targets = excons.DeclareTargets(env, [zoic])
+
+out_prefix = excons.OutputBaseDirectory() + "/"
+
+targets["mtd"] = env.Install(out_prefix + "arnold", "src/zoic.mtd")
+targets["maya"]  = env.Install(out_prefix + "maya", glob.glob("maya/*"))
+targets["c4d"]  = env.Install(out_prefix + "c4d", glob.glob("c4d/*"))
+targets["ldata"] = env.Install(out_prefix + "data/lenses", glob.glob("lenses_tabular/*.dat"))
+targets["bdata"] = env.Install(out_prefix + "data/bokeh", glob.glob("bokeh_images/*.jpg"))
+
+env.Depends(targets["zoic"], targets["mtd"])
+env.Depends(targets["zoic"], targets["maya"])
+env.Depends(targets["zoic"], targets["c4d"])
+env.Depends(targets["zoic"], targets["ldata"])
+env.Depends(targets["zoic"], targets["bdata"])
+
+eco_prefix = "/%s/" % excons.EcosystemPlatform()
+
+eco = excons.EcosystemDist(env, "zoic.env", {"zoic": eco_prefix + "arnold",
+                                             "mtd": eco_prefix + "arnold",
+                                             "maya": eco_prefix + "maya",
+                                             "ldata": eco_prefix + "data/lenses",
+                                             "bdata": eco_prefix + "data/bokeh"}, targets=targets)
