@@ -10,3 +10,4 @@ build/*
 /eco
 *.dblite
 excons.cache
+*.env.tmp
