@@ -60,12 +60,14 @@ env.Depends(targets["zoic"], targets["c4d"])
 env.Depends(targets["zoic"], targets["ldata"])
 env.Depends(targets["zoic"], targets["bdata"])
 
-eco_prefix = "/%s/" % excons.EcosystemPlatform()
+excons.EcosystemDist(env, "zoic.env",
+                     {"zoic": "/arnold/%s" % excons.EcosystemPlatform(),
+                      "mtd": "/arnold/%s" % excons.EcosystemPlatform(),
+                      "maya": "/maya",
+                      "c4d": "/c4d",
+                      "ldata": "/data/lenses",
+                      "bdata": "/data/bokeh"},
+                     targets=targets,
+                     ecoenv={"requires": ["arnold%s+" % arnold.Version(asString=True)]})
 
-eco = excons.EcosystemDist(env, "zoic.env", {"zoic": eco_prefix + "arnold",
-                                             "mtd": eco_prefix + "arnold",
-                                             "maya": eco_prefix + "maya",
-                                             "ldata": eco_prefix + "data/lenses",
-                                             "bdata": eco_prefix + "data/bokeh"},
-                           targets=targets,
-                           ecoenv={"requires": ["arnold%s+" % arnold.Version(asString=True)]})
+Default(targets["zoic"])
