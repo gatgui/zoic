@@ -5,15 +5,12 @@ import excons
 from excons.tools import arnold
 
 
-env = excons.MakeBaseEnv()
-
 version = "2.0.0"
+
+env = excons.MakeBaseEnv()
 
 if sys.platform != "win32":
     env.Append(CPPFLAGS=" -Wno-unused-parameter -Wno-unused-variable")
-
-# Arnold 4.2.9.0 provides api AiTextureLoad to read texture data
-# Arnold 4.2.10.0 adds a new parameter to the function above
 
 defs = []
 incdirs = []
@@ -28,6 +25,8 @@ if excons.GetArgument("work", 0, int) != 0:
 if excons.GetArgument("macbook", 0, int) != 0:
     defs.append("_MACBOOK")
 
+# Arnold 4.2.9.0 provides api AiTextureLoad to read texture data
+# Arnold 4.2.10.0 adds a new parameter to the function above
 arniver = arnold.Version(asString=False)
 if arniver[0] < 4 or (arniver[0] == 4 and (arniver[1] < 2 or (arniver[1] == 2 and arniver[2] < 10))):
     print("Arnold 4.2.10.0 at least required")
