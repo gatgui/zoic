@@ -11,3 +11,5 @@ build/*
 *.dblite
 excons.cache
 *.env.tmp
+*.DS_STORE
+/bin
