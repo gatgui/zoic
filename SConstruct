@@ -32,9 +32,11 @@ if arniver[0] < 4 or (arniver[0] == 4 and (arniver[1] < 2 or (arniver[1] == 2 an
     print("Arnold 4.2.10.0 at least required")
     sys.exit(1)
 
+arnicompat = "%d.%d" % (arniver[0], arniver[1])
+
 zoic = {"name": "zoic",
         "type": "dynamicmodule",
-        "prefix": "arnold/%s" % arnold.Version(compat=True),
+        "prefix": "arnold/%s" % arnicompat,
         "ext": arnold.PluginExt(),
         "srcs": ["src/zoic.cpp"],
         "defs": defs,
@@ -47,7 +49,7 @@ targets = excons.DeclareTargets(env, [zoic])
 
 out_prefix = excons.OutputBaseDirectory() + "/"
 
-targets["mtd"] = env.Install(out_prefix + "arnold/" + arnold.Version(compat=True), "src/zoic.mtd")
+targets["mtd"] = env.Install(out_prefix + "arnold/" + arnicompat, "src/zoic.mtd")
 targets["maya"]  = env.Install(out_prefix + "maya", glob.glob("maya/*"))
 targets["c4d"]  = env.Install(out_prefix + "c4d", glob.glob("c4d/*"))
 targets["ldata"] = env.Install(out_prefix + "data/lenses", glob.glob("lenses_tabular/*.dat"))
@@ -60,13 +62,12 @@ env.Depends(targets["zoic"], targets["ldata"])
 env.Depends(targets["zoic"], targets["bdata"])
 
 excons.EcosystemDist(env, "zoic.env",
-                     {"zoic": "/arnold/%s" % excons.EcosystemPlatform(),
-                      "mtd": "/arnold/%s" % excons.EcosystemPlatform(),
+                     {"zoic": "/arnold/%s/%s" % (arnicompat, excons.EcosystemPlatform()),
+                      "mtd": "/arnold/%s/%s" % (arnicompat, excons.EcosystemPlatform()),
                       "maya": "/maya",
                       "c4d": "/c4d",
                       "ldata": "/data/lenses",
                       "bdata": "/data/bokeh"},
-                     targets=targets,
-                     ecoenv={"requires": ["arnold%s+" % arnold.Version(asString=True)]})
+                     targets=targets)
 
 Default(targets["zoic"])
