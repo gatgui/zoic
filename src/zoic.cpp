@@ -1033,8 +1033,7 @@ AtVector2 lineLineIntersection(AtVector line1_origin, AtVector line1_direction, 
     float B2 = line2_origin.z - line2_direction.z;
     float C2 = A2 * line2_origin.z + B2 * line2_origin.y;
     float delta = A1 * B2 - A2 * B1;
-    AtVector2 rv = { (B2 * C1 - B1 * C2) / delta, (A1 * C2 - A2 * C1) / delta };
-    return rv;
+    return AtVector2((B2 * C1 - B1 * C2) / delta, (A1 * C2 - A2 * C1) / delta);
 }
 
 
