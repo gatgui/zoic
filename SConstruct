@@ -34,7 +34,7 @@ if arniver[0] < 4 or (arniver[0] == 4 and (arniver[1] < 2 or (arniver[1] == 2 an
 
 zoic = {"name": "zoic",
         "type": "dynamicmodule",
-        "prefix": "arnold",
+        "prefix": "arnold/%s" % arnold.Version(compat=True),
         "ext": arnold.PluginExt(),
         "srcs": ["src/zoic.cpp"],
         "defs": defs,
@@ -47,7 +47,7 @@ targets = excons.DeclareTargets(env, [zoic])
 
 out_prefix = excons.OutputBaseDirectory() + "/"
 
-targets["mtd"] = env.Install(out_prefix + "arnold", "src/zoic.mtd")
+targets["mtd"] = env.Install(out_prefix + "arnold/" + arnold.Version(compat=True), "src/zoic.mtd")
 targets["maya"]  = env.Install(out_prefix + "maya", glob.glob("maya/*"))
 targets["c4d"]  = env.Install(out_prefix + "c4d", glob.glob("c4d/*"))
 targets["ldata"] = env.Install(out_prefix + "data/lenses", glob.glob("lenses_tabular/*.dat"))
